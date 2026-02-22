@@ -7,9 +7,11 @@ Live: https://quinnrenaghan.github.io/algorithm-race/
 ---
 
 **Pathfinding race (completed)**
+
 <img width="461" height="514" alt="Screenshot 2026-02-22 at 12 49 18 PM" src="https://github.com/user-attachments/assets/911c18f3-f55d-49e4-ab42-6750b84ffd78" />
 
 **Sorting race (completed)**
+
 <img width="452" height="541" alt="image" src="https://github.com/user-attachments/assets/7b5a0538-1500-449d-b7a7-69937332fb74" />
 
 ---
