@@ -6,15 +6,11 @@ Live: https://quinnrenaghan.github.io/algorithm-race/
 
 ---
 
-## Screenshots
-
 **Pathfinding race (completed)**
-
-<!-- Add screenshot: pathfinding-race.png -->
+<img width="461" height="514" alt="Screenshot 2026-02-22 at 12 49 18 PM" src="https://github.com/user-attachments/assets/911c18f3-f55d-49e4-ab42-6750b84ffd78" />
 
 **Sorting race (completed)**
-
-<!-- Add screenshot: sorting-race.png -->
+<img width="452" height="541" alt="image" src="https://github.com/user-attachments/assets/7b5a0538-1500-449d-b7a7-69937332fb74" />
 
 ---
 
@@ -28,7 +24,7 @@ Live: https://quinnrenaghan.github.io/algorithm-race/
 
 ## Pathfinding Race
 
-Four algorithms find a path from start (green) to end (red) on a 15x15 grid with random walls. Explored cells turn purple; the final path is yellow.
+Four algorithms find a path from start (green) to end (red) on a grid with random walls. Explored cells turn purple, and the final path is yellow.
 
 | Algorithm | Time | Space | Notes |
 |-----------|------|-------|-------|
@@ -43,7 +39,7 @@ Implementation: `frontend/src/algorithms/pathfinding.ts`
 
 ## Sorting Race
 
-Four algorithms sort an array of 30 random integers. Bars turn yellow when compared, green when sorted. Merge sort uses red/blue for partitions and purple for merged sub-arrays.
+Four algorithms sort an array of random integers. Bars turn yellow when compared, green when sorted. Merge sort uses red/blue for partitions and purple for merged sub-arrays.
 
 | Algorithm | Time (avg) | Time (worst) | Space | Notes |
 |-----------|------------|--------------|-------|-------|
@@ -55,11 +51,3 @@ Four algorithms sort an array of 30 random integers. Bars turn yellow when compa
 Implementation: `frontend/src/algorithms/sorting.ts`
 
 ---
-
-## Run Locally
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
