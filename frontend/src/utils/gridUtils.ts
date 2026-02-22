@@ -1,7 +1,7 @@
 import type { GridConfig } from '../types';
 
-const GRID_SIZE = 15;
-const WALL_PROBABILITY = 0.2;
+const GRID_SIZE = 20;
+const WALL_PROBABILITY = 0.3;
 
 function key(row: number, col: number): string {
   return `${row},${col}`;

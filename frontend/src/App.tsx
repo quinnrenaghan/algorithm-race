@@ -1,25 +1,38 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Quadrant } from './components/Quadrant';
+import { SortingQuadrant } from './components/SortingQuadrant';
 import { createRandomGrid } from './utils/gridUtils';
+import { createRandomArray } from './utils/sortUtils';
 import { dijkstra, astar, bfs, dfs } from './algorithms/pathfinding';
+import { runSortAlgorithm, type SortAlgorithm, type SortStep } from './algorithms/sorting';
 import type { GridConfig } from './types';
 import type { AlgorithmType } from './types';
 import type { PathfindingResult } from './algorithms/pathfinding';
 import './App.css';
 
-const ALGORITHMS: AlgorithmType[] = ['dijkstra', 'astar', 'bfs', 'dfs'];
+type RaceMode = 'pathfinding' | 'sorting';
 
-const ALGORITHM_LABELS: Record<AlgorithmType, string> = {
+const PATHFINDING_ALGORITHMS: AlgorithmType[] = ['dijkstra', 'astar', 'bfs', 'dfs'];
+const SORT_ALGORITHMS: SortAlgorithm[] = ['bubble', 'selection', 'quick', 'merge'];
+
+const PATHFINDING_LABELS: Record<AlgorithmType, string> = {
   dijkstra: 'Dijkstra',
   astar: 'A*',
   bfs: 'BFS',
   dfs: 'DFS',
 };
 
-function getRaceWinners(results: Record<AlgorithmType, PathfindingResult | null>) {
+const SORT_LABELS: Record<SortAlgorithm, string> = {
+  bubble: 'Bubble Sort',
+  selection: 'Selection Sort',
+  quick: 'Quick Sort',
+  merge: 'Merge Sort',
+};
+
+function getPathfindingWinners(results: Record<AlgorithmType, PathfindingResult | null>) {
   if (!results.dijkstra) return null;
-  const fastest = ALGORITHMS.reduce((best, algo) => {
+  const fastest = PATHFINDING_ALGORITHMS.reduce((best, algo) => {
     const r = results[algo]!;
     if (r.path.length === 0) return best;
     const explored = r.explored.length;
@@ -28,9 +41,9 @@ function getRaceWinners(results: Record<AlgorithmType, PathfindingResult | null>
   }, null as { algo: AlgorithmType; explored: number } | null);
 
   const minPathLen = Math.min(
-    ...ALGORITHMS.map((a) => results[a]!.path.length).filter((n) => n > 0)
+    ...PATHFINDING_ALGORITHMS.map((a) => results[a]!.path.length).filter((n) => n > 0)
   );
-  const shortestPath = ALGORITHMS.filter(
+  const shortestPath = PATHFINDING_ALGORITHMS.filter(
     (a) => results[a]!.path.length === minPathLen && minPathLen > 0
   );
 
@@ -38,6 +51,9 @@ function getRaceWinners(results: Record<AlgorithmType, PathfindingResult | null>
 }
 
 export default function App() {
+  const [mode, setMode] = useState<RaceMode>('pathfinding');
+
+  // Pathfinding state
   const [config, setConfig] = useState<GridConfig>(() => createRandomGrid());
   const [results, setResults] = useState<Record<AlgorithmType, PathfindingResult | null>>({
     dijkstra: null,
@@ -52,13 +68,36 @@ export default function App() {
     exploredUpTo: { dijkstra: 0, astar: 0, bfs: 0, dfs: 0 },
     pathUpTo: { dijkstra: 0, astar: 0, bfs: 0, dfs: 0 },
   });
+
+  // Sorting state
+  const [sortArray, setSortArray] = useState<number[]>(() => createRandomArray());
+  const [sortSteps, setSortSteps] = useState<Record<SortAlgorithm, SortStep[]>>({
+    bubble: [],
+    selection: [],
+    quick: [],
+    merge: [],
+  });
+  const [sortStepIndex, setSortStepIndex] = useState<Record<SortAlgorithm, number>>({
+    bubble: 0,
+    selection: 0,
+    quick: 0,
+    merge: 0,
+  });
+  const [sortFinishTimes, setSortFinishTimes] = useState<Record<SortAlgorithm, number | null>>({
+    bubble: null,
+    selection: null,
+    quick: null,
+    merge: null,
+  });
+
   const [isRunning, setIsRunning] = useState(false);
   const [raceComplete, setRaceComplete] = useState(false);
   const intervalRef = useRef<number | null>(null);
+  const sortStartTimeRef = useRef<number>(0);
 
-  const winners = getRaceWinners(results);
+  const pathfindingWinners = getPathfindingWinners(results);
 
-  const runAlgorithms = useCallback(() => {
+  const runPathfinding = useCallback(() => {
     const newResults: Record<AlgorithmType, PathfindingResult> = {
       dijkstra: dijkstra(config),
       astar: astar(config),
@@ -74,28 +113,53 @@ export default function App() {
     setIsRunning(true);
   }, [config]);
 
+  const runSorting = useCallback(() => {
+    const arr = [...sortArray];
+    const steps: Record<SortAlgorithm, SortStep[]> = {
+      bubble: runSortAlgorithm('bubble', arr),
+      selection: runSortAlgorithm('selection', arr),
+      quick: runSortAlgorithm('quick', arr),
+      merge: runSortAlgorithm('merge', arr),
+    };
+    setSortSteps(steps);
+    setSortStepIndex({ bubble: 0, selection: 0, quick: 0, merge: 0 });
+    setSortFinishTimes({ bubble: null, selection: null, quick: null, merge: null });
+    setRaceComplete(false);
+    sortStartTimeRef.current = performance.now();
+    setIsRunning(true);
+  }, [sortArray]);
+
   const newRace = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    setConfig(createRandomGrid());
-    setResults({ dijkstra: null, astar: null, bfs: null, dfs: null });
-    setAnimationState({
-      exploredUpTo: { dijkstra: 0, astar: 0, bfs: 0, dfs: 0 },
-      pathUpTo: { dijkstra: 0, astar: 0, bfs: 0, dfs: 0 },
-    });
+    if (mode === 'pathfinding') {
+      setConfig(createRandomGrid());
+      setResults({ dijkstra: null, astar: null, bfs: null, dfs: null });
+      setAnimationState({
+        exploredUpTo: { dijkstra: 0, astar: 0, bfs: 0, dfs: 0 },
+        pathUpTo: { dijkstra: 0, astar: 0, bfs: 0, dfs: 0 },
+      });
+    } else {
+      setSortArray(createRandomArray());
+      setSortSteps({ bubble: [], selection: [], quick: [], merge: [] });
+      setSortStepIndex({ bubble: 0, selection: 0, quick: 0, merge: 0 });
+      setSortFinishTimes({ bubble: null, selection: null, quick: null, merge: null });
+    }
     setIsRunning(false);
-  }, []);
+    setRaceComplete(false);
+  }, [mode]);
 
+  // Pathfinding animation
   useEffect(() => {
-    if (!isRunning || !results.dijkstra) return;
+    if (mode !== 'pathfinding' || !isRunning || !results.dijkstra) return;
 
     intervalRef.current = window.setInterval(() => {
       setAnimationState((prev) => {
         const nextExplored = { ...prev.exploredUpTo };
         const nextPath = { ...prev.pathUpTo };
-        for (const algo of ALGORITHMS) {
+        for (const algo of PATHFINDING_ALGORITHMS) {
           const res = results[algo]!;
           if (prev.exploredUpTo[algo] < res.explored.length) {
             nextExplored[algo] = Math.min(prev.exploredUpTo[algo] + 1, res.explored.length);
@@ -108,15 +172,14 @@ export default function App() {
     }, 25);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, results]);
+  }, [mode, isRunning, results]);
 
+  // Pathfinding completion check
   useEffect(() => {
-    if (!results.dijkstra) return;
-    const allDone = ALGORITHMS.every((algo) => {
+    if (mode !== 'pathfinding' || !results.dijkstra) return;
+    const allDone = PATHFINDING_ALGORITHMS.every((algo) => {
       const r = results[algo]!;
       return (
         animationState.exploredUpTo[algo] >= r.explored.length &&
@@ -127,7 +190,62 @@ export default function App() {
       setIsRunning(false);
       setRaceComplete(true);
     }
-  }, [results, animationState]);
+  }, [mode, results, animationState]);
+
+  // Sorting animation
+  useEffect(() => {
+    if (mode !== 'sorting' || !isRunning) return;
+
+    intervalRef.current = window.setInterval(() => {
+      const now = performance.now();
+      setSortStepIndex((prev) => {
+        const next = { ...prev };
+        for (const algo of SORT_ALGORITHMS) {
+          const steps = sortSteps[algo];
+          const maxIdx = steps.length - 1;
+          if (prev[algo] < maxIdx) {
+            const newIdx = Math.min(prev[algo] + 1, maxIdx);
+            next[algo] = newIdx;
+            if (newIdx === maxIdx && maxIdx >= 0) {
+              setSortFinishTimes((ft) => {
+                if (ft[algo] === null) {
+                  return { ...ft, [algo]: now - sortStartTimeRef.current };
+                }
+                return ft;
+              });
+            }
+          }
+        }
+        return next;
+      });
+    }, 15);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [mode, isRunning, sortSteps]);
+
+  // Sorting completion check
+  useEffect(() => {
+    if (mode !== 'sorting') return;
+    const allDone = SORT_ALGORITHMS.every((algo) => {
+      const steps = sortSteps[algo];
+      return steps.length > 0 && sortStepIndex[algo] >= steps.length - 1;
+    });
+    if (allDone) {
+      setIsRunning(false);
+      setRaceComplete(true);
+    }
+  }, [mode, sortSteps, sortStepIndex]);
+
+  const getSortedRankings = (): [SortAlgorithm, number][] => {
+    const entries = Object.entries(sortFinishTimes) as [SortAlgorithm, number | null][];
+    return entries
+      .filter((entry): entry is [SortAlgorithm, number] => entry[1] !== null)
+      .sort((a, b) => a[1] - b[1]);
+  };
+
+  const sortRankings = getSortedRankings();
 
   return (
     <div className="app">
@@ -141,7 +259,7 @@ export default function App() {
         <div className="controls">
           <motion.button
             className="btn btn-start"
-            onClick={runAlgorithms}
+            onClick={mode === 'pathfinding' ? runPathfinding : runSorting}
             disabled={isRunning}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -156,46 +274,89 @@ export default function App() {
           >
             New Race
           </motion.button>
+          <motion.button
+            className="btn btn-mode"
+            onClick={() => setMode((m) => (m === 'pathfinding' ? 'sorting' : 'pathfinding'))}
+            disabled={isRunning}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {mode === 'pathfinding' ? 'Sorting Race' : 'Pathfinding Race'}
+          </motion.button>
         </div>
       </motion.header>
 
-      {raceComplete && winners && (
+      {raceComplete && mode === 'pathfinding' && pathfindingWinners && (
         <motion.div
           className="race-results"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          {winners.fastest && (
+          {pathfindingWinners.fastest && (
             <p className="result-line">
               <span className="result-label">Fastest:</span>{' '}
-              {ALGORITHM_LABELS[winners.fastest.algo]} (explored {winners.fastest.explored} cells)
+              {PATHFINDING_LABELS[pathfindingWinners.fastest.algo]} (explored{' '}
+              {pathfindingWinners.fastest.explored} cells)
             </p>
           )}
-          {winners.shortestPath.length > 0 && (
+          {pathfindingWinners.shortestPath.length > 0 && (
             <p className="result-line">
               <span className="result-label">Shortest path:</span>{' '}
-              {winners.shortestPath.map((a) => ALGORITHM_LABELS[a]).join(', ')} (
-              {winners.minPathLen} steps)
+              {pathfindingWinners.shortestPath.map((a) => PATHFINDING_LABELS[a]).join(', ')} (
+              {pathfindingWinners.minPathLen} steps)
             </p>
           )}
         </motion.div>
       )}
 
-      <div className="quadrants">
-        <div className="quadrants-inner">
-          {ALGORITHMS.map((algo) => (
-            <Quadrant
-            key={algo}
-            config={config}
-            algorithm={algo}
-            result={results[algo]}
-            exploredUpTo={animationState.exploredUpTo[algo]}
-            pathUpTo={animationState.pathUpTo[algo]}
-          />
-        ))}
+      {raceComplete && mode === 'sorting' && sortRankings.length > 0 && (
+        <motion.div
+          className="race-results"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {sortRankings.map(([algo, time], i) => (
+            <p key={algo} className="result-line">
+              {i + 1}. {SORT_LABELS[algo]} ({(time / 1000).toFixed(2)}s)
+            </p>
+          ))}
+        </motion.div>
+      )}
+
+      {mode === 'pathfinding' && (
+        <div className="quadrants">
+          <div className="quadrants-inner">
+            {PATHFINDING_ALGORITHMS.map((algo) => (
+              <Quadrant
+                key={algo}
+                config={config}
+                algorithm={algo}
+                result={results[algo]}
+                exploredUpTo={animationState.exploredUpTo[algo]}
+                pathUpTo={animationState.pathUpTo[algo]}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {mode === 'sorting' && (
+        <div className="quadrants">
+          <div className="quadrants-inner">
+            {SORT_ALGORITHMS.map((algo) => (
+              <SortingQuadrant
+                key={algo}
+                algorithm={algo}
+                steps={sortSteps[algo]}
+                stepIndex={sortStepIndex[algo]}
+                initialArray={sortArray}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
