@@ -53,8 +53,15 @@ function getPathfindingWinners(results: Record<AlgorithmType, PathfindingResult 
 export default function App() {
   const [mode, setMode] = useState<RaceMode>('pathfinding');
 
+  // User inputs
+  const [gridSize, setGridSize] = useState(15);
+  const [wallPercentage, setWallPercentage] = useState(0.2);
+  const [arraySize, setArraySize] = useState(30);
+
   // Pathfinding state
-  const [config, setConfig] = useState<GridConfig>(() => createRandomGrid());
+  const [config, setConfig] = useState<GridConfig>(() =>
+    createRandomGrid(15, 0.2)
+  );
   const [results, setResults] = useState<Record<AlgorithmType, PathfindingResult | null>>({
     dijkstra: null,
     astar: null,
@@ -70,7 +77,9 @@ export default function App() {
   });
 
   // Sorting state
-  const [sortArray, setSortArray] = useState<number[]>(() => createRandomArray());
+  const [sortArray, setSortArray] = useState<number[]>(() =>
+    createRandomArray(30)
+  );
   const [sortSteps, setSortSteps] = useState<Record<SortAlgorithm, SortStep[]>>({
     bubble: [],
     selection: [],
@@ -96,6 +105,24 @@ export default function App() {
   const sortStartTimeRef = useRef<number>(0);
 
   const pathfindingWinners = getPathfindingWinners(results);
+
+  // Regenerate when pathfinding inputs change
+  useEffect(() => {
+    if (mode === 'pathfinding' && !isRunning) {
+      setConfig(createRandomGrid(gridSize, wallPercentage));
+      setResults({ dijkstra: null, astar: null, bfs: null, dfs: null });
+    }
+  }, [mode, gridSize, wallPercentage]);
+
+  // Regenerate when sorting input changes
+  useEffect(() => {
+    if (mode === 'sorting' && !isRunning) {
+      setSortArray(createRandomArray(arraySize));
+      setSortSteps({ bubble: [], selection: [], quick: [], merge: [] });
+      setSortStepIndex({ bubble: 0, selection: 0, quick: 0, merge: 0 });
+      setSortFinishTimes({ bubble: null, selection: null, quick: null, merge: null });
+    }
+  }, [mode, arraySize]);
 
   const runPathfinding = useCallback(() => {
     const newResults: Record<AlgorithmType, PathfindingResult> = {
@@ -135,21 +162,21 @@ export default function App() {
       intervalRef.current = null;
     }
     if (mode === 'pathfinding') {
-      setConfig(createRandomGrid());
+      setConfig(createRandomGrid(gridSize, wallPercentage));
       setResults({ dijkstra: null, astar: null, bfs: null, dfs: null });
       setAnimationState({
         exploredUpTo: { dijkstra: 0, astar: 0, bfs: 0, dfs: 0 },
         pathUpTo: { dijkstra: 0, astar: 0, bfs: 0, dfs: 0 },
       });
     } else {
-      setSortArray(createRandomArray());
+      setSortArray(createRandomArray(arraySize));
       setSortSteps({ bubble: [], selection: [], quick: [], merge: [] });
       setSortStepIndex({ bubble: 0, selection: 0, quick: 0, merge: 0 });
       setSortFinishTimes({ bubble: null, selection: null, quick: null, merge: null });
     }
     setIsRunning(false);
     setRaceComplete(false);
-  }, [mode]);
+  }, [mode, gridSize, wallPercentage, arraySize]);
 
   // Pathfinding animation
   useEffect(() => {
@@ -256,6 +283,61 @@ export default function App() {
         transition={{ duration: 0.4 }}
       >
         <h1>Algorithm Race</h1>
+
+        {mode === 'pathfinding' && (
+          <div className="inputs">
+            <label>
+              Grid size
+              <input
+                type="number"
+                min={5}
+                max={25}
+                value={gridSize}
+                onChange={(e) =>
+                  setGridSize(Math.min(25, Math.max(5, Number(e.target.value) || 5)))
+                }
+                disabled={isRunning}
+              />
+            </label>
+            <label>
+              Wall %
+              <input
+                type="number"
+                min={0}
+                max={0.5}
+                step={0.05}
+                value={wallPercentage}
+                onChange={(e) =>
+                  setWallPercentage(
+                    Math.min(0.5, Math.max(0, Number(e.target.value) || 0))
+                  )
+                }
+                disabled={isRunning}
+              />
+            </label>
+          </div>
+        )}
+
+        {mode === 'sorting' && (
+          <div className="inputs">
+            <label>
+              Array size
+              <input
+                type="number"
+                min={10}
+                max={100}
+                value={arraySize}
+                onChange={(e) =>
+                  setArraySize(
+                    Math.min(100, Math.max(10, Number(e.target.value) || 10))
+                  )
+                }
+                disabled={isRunning}
+              />
+            </label>
+          </div>
+        )}
+
         <div className="controls">
           <motion.button
             className="btn btn-start"

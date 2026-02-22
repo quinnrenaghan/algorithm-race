@@ -1,32 +1,29 @@
 import type { GridConfig } from '../types';
 
-const GRID_SIZE = 20;
-const WALL_PROBABILITY = 0.3;
-
 function key(row: number, col: number): string {
   return `${row},${col}`;
 }
 
-export function createRandomGrid(): GridConfig {
+export function createRandomGrid(
+  gridSize: number,
+  wallProbability: number
+): GridConfig {
   const walls = new Set<string>();
 
-  // Add random walls
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
-      if (Math.random() < WALL_PROBABILITY) {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      if (Math.random() < wallProbability) {
         walls.add(key(r, c));
       }
     }
   }
 
-  // Pick start and end - ensure they're not walls and not the same
   let start = { row: 0, col: 0 };
-  let end = { row: GRID_SIZE - 1, col: GRID_SIZE - 1 };
+  let end = { row: gridSize - 1, col: gridSize - 1 };
 
-  // Find valid start (top-left area)
   const startCandidates: { row: number; col: number }[] = [];
-  for (let r = 0; r < Math.ceil(GRID_SIZE / 2); r++) {
-    for (let c = 0; c < Math.ceil(GRID_SIZE / 2); c++) {
+  for (let r = 0; r < Math.ceil(gridSize / 2); r++) {
+    for (let c = 0; c < Math.ceil(gridSize / 2); c++) {
       if (!walls.has(key(r, c))) {
         startCandidates.push({ row: r, col: c });
       }
@@ -36,13 +33,11 @@ export function createRandomGrid(): GridConfig {
     start = startCandidates[Math.floor(Math.random() * startCandidates.length)];
   }
 
-  // Remove start from walls if it was added
   walls.delete(key(start.row, start.col));
 
-  // Find valid end (bottom-right area)
   const endCandidates: { row: number; col: number }[] = [];
-  for (let r = Math.floor(GRID_SIZE / 2); r < GRID_SIZE; r++) {
-    for (let c = Math.floor(GRID_SIZE / 2); c < GRID_SIZE; c++) {
+  for (let r = Math.floor(gridSize / 2); r < gridSize; r++) {
+    for (let c = Math.floor(gridSize / 2); c < gridSize; c++) {
       const k = key(r, c);
       if (!walls.has(k) && !(r === start.row && c === start.col)) {
         endCandidates.push({ row: r, col: c });
@@ -56,8 +51,8 @@ export function createRandomGrid(): GridConfig {
   walls.delete(key(end.row, end.col));
 
   return {
-    rows: GRID_SIZE,
-    cols: GRID_SIZE,
+    rows: gridSize,
+    cols: gridSize,
     start,
     end,
     walls,
